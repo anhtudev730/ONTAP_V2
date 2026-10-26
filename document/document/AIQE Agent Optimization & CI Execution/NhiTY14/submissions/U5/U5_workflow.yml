@@ -1,0 +1,166 @@
+# U5_workflow.yml — CI Workflow Draft (DRY-RUN / DESIGN-REVIEWED)
+# IMPORTANT: This is a DRY-RUN design draft for the synthetic U5 lab only.
+# Do NOT deploy into the documentation repository.
+# The current workspace has only a starter login test; F01/F02/F03, @smoke tags,
+# lab:preflight, and lab:reconcile are not implemented. This draft is not runnable
+# until those prerequisites are delivered and validated in an authorized lab.
+# Force-cancel recovery also requires a trainer-provided durable ownership ledger
+# or server-side lookup; test-results/owned-ledger.json alone is not durable.
+# Actual base URL, accounts, and secrets have not been provisioned.
+# Default branch name 'main' is an assumption from CI-PACKET-05 — verify on live repo.
+
+name: Agent CI - Lab Smoke Tests
+
+permissions:
+  contents: read
+
+on:
+  # PR lane: no live credentials and no writes to isolated-lab.
+  pull_request:
+    branches:
+      - main  # ASSUMPTION: verify default branch name on live repo
+
+  # Manual dispatch: full smoke on the protected lab environment.
+  workflow_dispatch:
+
+  # Scheduled lane: daily at 01:17 Vietnam time (UTC+7) = 18:17 UTC
+  # NOTE: Schedule only fires when this workflow file is on the default branch (main).
+  # Merging to main is required before schedule becomes active.
+  schedule:
+    - cron: "17 18 * * *"  # 18:17 UTC = 01:17+07:00 Vietnam (next calendar day VN)
+
+env:
+  NODE_VERSION: "22"
+  PLAYWRIGHT_PROJECT: "chromium"
+
+jobs:
+  # ── PR LANE ─────────────────────────────────────────────────────────────────
+  pr-checks:
+    name: PR Static Checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci  # Uses package-lock.json; do not use npm install
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      - name: Test discovery
+        run: npx playwright test --list
+
+      - name: Smoke test discovery
+        # Playwright must fail when the filter selects no tests; never allow a
+        # success-shaped empty selection with --pass-with-no-tests.
+        run: npx playwright test --list --grep "@smoke"
+
+  # ── LIVE SMOKE LANE ──────────────────────────────────────────────────────────
+  smoke-tests:
+    name: Live Smoke — isolated-lab
+    # Runs on manual dispatch OR schedule only; NOT on PR (PR has no live secrets from fork)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: isolated-lab  # Environment protection gate; secrets scoped here
+    concurrency:
+      # One shared lab: serialize all writers, regardless of branch or run ID.
+      # GitHub retains at most one pending run per group; monitor for replaced
+      # pending manual runs rather than claiming every dispatch is guaranteed.
+      group: lab-smoke-isolated-lab
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Playwright install (chromium only)
+        run: npx playwright install --with-deps chromium
+
+      - name: Preflight check
+        id: preflight
+        # lab:preflight must exit 0 before any test runs.
+        # Also requires durable ownership ledger/lookup and creates a run entry.
+        # Validates: env vars present, URL allowlist, app reachable, roles ready.
+        # Does NOT print credential values.
+        run: npm run lab:preflight
+        env:
+          LAB_URL: ${{ secrets.LAB_URL }}
+          LAB_USERNAME: ${{ secrets.LAB_USERNAME }}
+          LAB_PASSWORD: ${{ secrets.LAB_PASSWORD }}
+          LAB_VIEWER_USERNAME: ${{ secrets.LAB_VIEWER_USERNAME }}
+          LAB_VIEWER_PASSWORD: ${{ secrets.LAB_VIEWER_PASSWORD }}
+          LAB_NAMESPACE_PREFIX: "E2E-AOCE"
+          LAB_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          LAB_LEDGER_PATH: ./test-results/owned-ledger.json
+
+      - name: Smoke test discovery
+        run: npx playwright test --list --grep "@smoke" --project=${{ env.PLAYWRIGHT_PROJECT }}
+
+      - name: Run @smoke tests
+        # --grep '@smoke': selects only tagged smoke tests
+        # NO --pass-with-no-tests: 0 tests selected must fail the job
+        run: npx playwright test --grep "@smoke" --project=${{ env.PLAYWRIGHT_PROJECT }}
+        env:
+          LAB_URL: ${{ secrets.LAB_URL }}
+          LAB_USERNAME: ${{ secrets.LAB_USERNAME }}
+          LAB_PASSWORD: ${{ secrets.LAB_PASSWORD }}
+          LAB_VIEWER_USERNAME: ${{ secrets.LAB_VIEWER_USERNAME }}
+          LAB_VIEWER_PASSWORD: ${{ secrets.LAB_VIEWER_PASSWORD }}
+          LAB_NAMESPACE_PREFIX: "E2E-AOCE"
+          LAB_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Reconcile owned records
+        # Runs after successful preflight even if the test step fails.
+        # Force-cancellation can still prevent reconciliation from completing.
+        # lab:reconcile must consult the durable source, not just the local artifact.
+        # DO NOT add '|| true': reconcile failure must fail the job.
+        # Exits non-zero if any owned record from this run is unresolved.
+        if: always() && steps.preflight.outcome == 'success'
+        run: npm run lab:reconcile
+        env:
+          LAB_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          LAB_LEDGER_PATH: ./test-results/owned-ledger.json
+
+      - name: Upload test artifacts
+        # ALWAYS upload — even if tests fail — to preserve trace evidence.
+        # Critical: without 'if: always()', artifacts are lost on failure (CI-54 bug).
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-smoke-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+# ── NOTES ────────────────────────────────────────────────────────────────────
+# Secrets: All credentials must be stored in GitHub Secrets / environment secrets.
+#          Never put literal values in this YAML file.
+# Fork PRs: Secrets are not available to fork PRs (CI-51). PR lane runs static
+#           checks only; no live credentials needed.
+# Schedule firing: This schedule will only fire when this file is on the default
+#                  branch (main). Feature-branch-only workflow = no schedule (CI-57).
+# Concurrency: all writers to isolated-lab share one lock; per-run IDs are
+#              separately generated and must be unique (CI-56).
+# No --pass-with-no-tests: 0 tests = job failure, not silent pass (CI-53).
+# Reconcile runs after successful preflight, including ordinary test failure.
+# Force-cancel remains best-effort: the next preflight must consult the
+# trainer-provided durable ledger/lookup and block until owner reconciliation.
+# Trace capture is configured in U5_playwright-config.ts; upload alone is insufficient.

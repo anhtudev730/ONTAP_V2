@@ -1,0 +1,10 @@
+sample,input_total,cached,uncached,output,model_cost,ci_cost,measured_total,usage_status,quality_score,gate,reason
+A1,18000,2000,16000,2400,0.02560,0.08000,0.10560,complete_simulated,10,PASS,"AC-EMP-01/02; matching fixture evidence; owned cleanup; schema labeled SIMULATED"
+A2,17500,1500,16000,2300,0.02520,0.08200,0.10720,complete_simulated,10,PASS,"AC-EMP-01/02; matching fixture evidence; owned cleanup; schema labeled SIMULATED"
+A3,19000,2000,17000,2500,0.02700,0.08400,0.11100,complete_simulated,10,PASS,"AC-EMP-01/02; matching fixture evidence; owned cleanup; schema labeled SIMULATED"
+B1,6000,1000,5000,900,0.00860,0.07000,0.07860,complete_simulated,3,FAIL,"Missing AC-EMP-02 department assertion; toast lacks runner-fixture evidence; cleanup not ownership-scoped; schema lacks SIMULATED/unknowns"
+B2,6200,1000,5200,950,0.00900,0.07200,0.08100,complete_simulated,3,FAIL,"Missing AC-EMP-02 department assertion; toast lacks runner-fixture evidence; cleanup not ownership-scoped; schema lacks SIMULATED/unknowns"
+B3,5900,900,5000,920,0.00868,0.06800,0.07668,complete_simulated,3,FAIL,"Missing AC-EMP-02 department assertion; toast lacks runner-fixture evidence; cleanup not ownership-scoped; schema lacks SIMULATED/unknowns"
+C1,8500,1500,7000,1400,0.01260,0.07400,0.08660,complete_simulated,10,PASS,"AC-EMP-01/02; matching fixture evidence; owned cleanup; schema labeled SIMULATED"
+C2,8200,1200,7000,1450,0.01280,0.07600,0.08880,complete_simulated,10,PASS,"AC-EMP-01/02; matching fixture evidence; owned cleanup; schema labeled SIMULATED"
+C3,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,0.07800,UNKNOWN,usage_missing,6,FAIL,"Current-run claim and cleanup cite EV-other-1 rather than EV-bench-1; usage missing; report CI lower bound only"

@@ -1,0 +1,9 @@
+{
+  "name": "portallite-qa-run-assistant",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node src/assistant.js",
+    "test": "node --test"
+  }
+}

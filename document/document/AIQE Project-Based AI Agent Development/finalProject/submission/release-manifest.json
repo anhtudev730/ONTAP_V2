@@ -1,0 +1,19 @@
+{
+  "moduleCode": "L4_AIQE_PBAAD",
+  "projectRevision": "working-tree",
+  "sourceVersion": "SOURCE-PBAAD-v1",
+  "environmentAlias": "isolated-lab",
+  "appOrSimulatorVersion": "Not provided",
+  "plannerMode": "scripted",
+  "modelConfigRef": "Not provided; actual planner evaluation pending",
+  "demoMode": "simulated local runner",
+  "runIds": ["demo-001"],
+  "evidenceIndexRef": "submission/evidence-index.md",
+  "qualityGateVerdict": "HOLD",
+  "assessmentStatus": "execution pending",
+  "verifiedScope": ["Local synthetic controller demonstration only"],
+  "knownIssues": ["Baseline và thiết kế chưa được trainer/peer xác nhận", "isolated-lab chưa được kết nối", "Chưa đánh giá model thật", "Chưa có ledger, reconcile hoặc cleanup helper", "Chưa kiểm tra provenance của evidence", "projectRevision là working-tree, chưa phải revision bất biến", "Đầu ra hiện chỉ là mô phỏng local"],
+  "pendingOwnedData": [],
+  "reproductionGuideRef": "README.md",
+  "sharingReviewRef": "Pending trainer/lab owner; keep lab-only"
+}

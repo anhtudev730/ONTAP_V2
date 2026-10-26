@@ -1,0 +1,27 @@
+﻿{
+  "mode": "SIMULATED",
+  "runId": "demo-001",
+  "attemptId": "a1",
+  "sourceVersion": "SOURCE-PBAAD-v1",
+  "flowId": "F01-create-search",
+  "assertions": [
+    {
+      "id": "F01-CREATED",
+      "passed": true
+    },
+    {
+      "id": "F01-ID",
+      "passed": true
+    },
+    {
+      "id": "F01-DEPARTMENT",
+      "passed": true
+    }
+  ],
+  "cleanup": "SIMULATED",
+  "verdict": "PASS",
+  "limitations": [
+    "Synthetic runner only; no app or lab was contacted.",
+    "Planner output was not evaluated as an actual model."
+  ]
+}
